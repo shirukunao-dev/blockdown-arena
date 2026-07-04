@@ -46,8 +46,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname,'public')));
 
 // Health endpoint for Render — prevents 30s spindown
+let totalTicks=0;
 app.get('/api/health',(req,res)=>{
-  res.json({ok:true,uptime:process.uptime(),players:Object.keys(rooms).length>0,version:'1.0.0'});
+  res.json({ok:true,uptime:process.uptime(),players:Object.keys(rooms).length>0,version:'1.0.0',ticks:totalTicks});
 });
 
 app.post('/api/register',(req,res)=>{
@@ -423,6 +424,7 @@ class Room{
   }
 
   _tick(){
+    totalTicks++;
     let players=this.getAllPlayers();
     let allDead=true;
     
