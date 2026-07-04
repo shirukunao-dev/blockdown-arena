@@ -248,29 +248,31 @@ if(isAndroid&&typeof Capacitor!=='undefined'){
   }catch(e){}
 }
 let WS=null;
-let user=null;
-let token=null;
 let connected=false;
+let user=null;
+let token=localStorage.getItem('token');
+let isAndroid=typeof AndroidBridge!=='undefined';
 let currentScreen='login';
-let currentRoomId=null;
-let gameState=null;
 let gameRunning=false;
-let inputs=[];
-let animations=[];
-let boardColors={};
+let currentRoomId=null;
+let pendingMessages=[];
 
-const COLORS={
-  I:'#00f0f0',O:'#f0f000',T:'#a000f0',S:'#00f000',
-  Z:'#f00000',J:'#0000f0',L:'#f0a000',G:'#666666',
-  ghost:'rgba(255,255,255,0.1)'
-};
+function send(msg){
+  if(WS&&WS.readyState===1){
+    WS.send(JSON.stringify(msg));
+    return true;
+  }
+  pendingMessages.push(msg);
+  return false;
+}
 
-// --- Screen Management ---
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  let el=document.getElementById(id+'-screen');
-  if(el)el.classList.add('active');
-  currentScreen=id;
+function flushPending(){
+  while(pendingMessages.length){
+    let msg=pendingMessages.shift();
+    if(WS&&WS.readyState===1){
+      WS.send(JSON.stringify(msg));
+    }
+  }
 }
 
 // --- WebSocket ---
@@ -302,9 +304,9 @@ function connectWS(){
     document.getElementById('btn-settings').style.display='none';
   }
   
-  // Show wake-up overlay if connection takes >3s
+  // Show wake-up overlay if connection takes >10s
   hideWakeup();
-  let connectTimer=setTimeout(showWakeup,3000);
+  let connectTimer=setTimeout(showWakeup,10000);
   
   WS=new WebSocket(proto+'//'+host);
   
@@ -312,6 +314,7 @@ function connectWS(){
     connected=true;
     clearTimeout(connectTimer);
     hideWakeup();
+    flushPending();
     if(token){
       WS.send(JSON.stringify({type:'auth',token}));
     }
@@ -392,15 +395,15 @@ function handleMessage(msg){
 
 // --- Auth ---
 function auth(username,password){
+  hideWakeup();
   fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username,password})})
   .then(r=>r.json()).then(d=>{
     if(d.ok){
       token=d.token;
+      localStorage.setItem('token',token);
       user=d.user;
-      if(WS&&WS.readyState===1){
-        WS.send(JSON.stringify({type:'auth',token}));
-      }
+      send({type:'auth',token});
       showScreen('menu');
       updateMenuUI();
       checkSubscription();
@@ -411,15 +414,15 @@ function auth(username,password){
 }
 
 function register(username,password){
+  hideWakeup();
   fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username,password})})
   .then(r=>r.json()).then(d=>{
     if(d.ok){
       token=d.token;
+      localStorage.setItem('token',token);
       user=d.user;
-      if(WS&&WS.readyState===1){
-        WS.send(JSON.stringify({type:'auth',token}));
-      }
+      send({type:'auth',token});
       showScreen('menu');
       updateMenuUI();
     }else{
@@ -429,6 +432,7 @@ function register(username,password){
 }
 
 function guestLogin(){
+  hideWakeup();
   send({type:'guest'});
 }
 
