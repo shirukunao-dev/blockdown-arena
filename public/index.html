@@ -256,6 +256,7 @@ let currentScreen='login';
 let gameRunning=false;
 let currentRoomId=null;
 let pendingMessages=[];
+let sessionStarted=false; // Prevent overlay from force-showing
 
 function send(msg){
   if(WS&&WS.readyState===1){
@@ -278,10 +279,12 @@ function flushPending(){
 // --- WebSocket ---
 let wakeupTimer=null;
 
-function showWakeup(){
+function showWakeup(reconnecting=false){
   document.getElementById('wakeup-overlay').classList.add('active');
-  document.getElementById('wakeup-overlay').querySelector('.msg').textContent='Waking up the arena...';
-  document.getElementById('wakeup-overlay').querySelector('.sub').textContent='Servers are spinning up\nShould be ready in 15-30 seconds';
+  const msg = reconnecting ? 'Connection lost. Reconnecting...' : 'Waking up the arena...';
+  const sub = reconnecting ? 'Check your internet connection' : 'Servers are spinning up\nShould be ready in 15-30 seconds';
+  document.getElementById('wakeup-overlay').querySelector('.msg').textContent = msg;
+  document.getElementById('wakeup-overlay').querySelector('.sub').textContent = sub;
 }
 
 function hideWakeup(){
@@ -312,6 +315,7 @@ function connectWS(){
   
   WS.onopen=()=>{
     connected=true;
+    sessionStarted=true;
     clearTimeout(connectTimer);
     hideWakeup();
     flushPending();
@@ -330,10 +334,13 @@ function connectWS(){
   WS.onclose=()=>{
     connected=false;
     clearTimeout(connectTimer);
-    showWakeup();
-    document.getElementById('wakeup-overlay').querySelector('.msg').textContent='Connection lost. Reconnecting...';
-    document.getElementById('wakeup-overlay').querySelector('.sub').textContent='Check your internet connection';
-    wakeupTimer=setTimeout(connectWS,3000);
+    if(sessionStarted){
+      showWakeup(true);
+      wakeupTimer=setTimeout(connectWS,3000);
+    } else {
+      // Still in initial connection phase, keep trying but don't force overlay if dismissed
+      wakeupTimer=setTimeout(connectWS,3000);
+    }
   };
   
   WS.onerror=()=>{
