@@ -238,6 +238,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;color:#fff;f
 // BLOCKDOWN ARENA CLIENT
 // ====================================================================
 
+// --- Global Error Reporter ---
+window.onerror = function(message, source, lineno, colno, error) {
+  let errDiv = document.createElement('div');
+  errDiv.style = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;padding:20px;z-index:9999;word-wrap:break-word;';
+  errDiv.innerHTML = '<strong>JS Error:</strong> ' + message + '<br>Line: ' + lineno;
+  document.body.prepend(errDiv);
+};
+
 // --- Google Play Billing Bridge ---
 // Detects if running inside Capacitor Android WebView
 const isAndroid=typeof Capacitor!=='undefined'&&Capacitor.isNativePlatform();
@@ -396,11 +404,13 @@ function handleMessage(msg){
 
 // --- Auth ---
 function auth(username,password){
+  console.log('Auth function triggered');
   hideWakeup();
   fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username,password})})
   .then(r=>r.json()).then(d=>{
     if(d.ok){
+      console.log('Auth success');
       token=d.token;
       localStorage.setItem('token',token);
       user=d.user;
@@ -409,17 +419,23 @@ function auth(username,password){
       updateMenuUI();
       checkSubscription();
     }else{
+      console.log('Auth fail:', d.error);
       document.getElementById('login-error').textContent=d.error;
     }
-  }).catch(e=>document.getElementById('login-error').textContent='Connection error');
+  }).catch(e=>{
+    console.log('Auth error:', e);
+    document.getElementById('login-error').textContent='Connection error';
+  });
 }
 
 function register(username,password){
+  console.log('Register function triggered');
   hideWakeup();
   fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username,password})})
   .then(r=>r.json()).then(d=>{
     if(d.ok){
+      console.log('Register success');
       token=d.token;
       localStorage.setItem('token',token);
       user=d.user;
@@ -427,9 +443,13 @@ function register(username,password){
       showScreen('menu');
       updateMenuUI();
     }else{
+      console.log('Register fail:', d.error);
       document.getElementById('login-error').textContent=d.error;
     }
-  }).catch(e=>document.getElementById('login-error').textContent='Connection error');
+  }).catch(e=>{
+    console.log('Register error:', e);
+    document.getElementById('login-error').textContent='Connection error';
+  });
 }
 
 function guestLogin(){
@@ -877,16 +897,23 @@ canvas.addEventListener('touchend',(e)=>{
 
 // --- UI Events ---
 document.getElementById('login-btn').addEventListener('click',()=>{
+  console.log('Login clicked');
   let u=document.getElementById('login-user').value;
   let p=document.getElementById('login-pass').value;
   if(u&&p)auth(u,p);
+  else alert('Please enter username and password');
 });
 document.getElementById('register-btn').addEventListener('click',()=>{
+  console.log('Register clicked');
   let u=document.getElementById('login-user').value;
   let p=document.getElementById('login-pass').value;
   if(u&&p)register(u,p);
+  else alert('Please enter username and password');
 });
-document.getElementById('guest-btn').addEventListener('click',guestLogin);
+document.getElementById('guest-btn').addEventListener('click',()=>{
+  console.log('Guest clicked');
+  guestLogin();
+});
 
 document.getElementById('btn-ranked').addEventListener('click',()=>findMatch('ranked'));
 document.getElementById('btn-casual').addEventListener('click',()=>findMatch('casual'));
