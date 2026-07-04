@@ -297,6 +297,11 @@ function connectWS(){
     proto='wss:';
   }
   
+  // Hide settings for normal users (only show if they manually tap the gear 5 times)
+  if(!localStorage.getItem('serverUrl')){
+    document.getElementById('btn-settings').style.display='none';
+  }
+  
   // Show wake-up overlay if connection takes >3s
   hideWakeup();
   let connectTimer=setTimeout(showWakeup,3000);
@@ -909,6 +914,16 @@ document.getElementById('go-menu').addEventListener('click',()=>{
 document.getElementById('btn-sub').addEventListener('click',()=>{
   showScreen('shop');
   loadShopItems();
+});
+
+// Hidden settings: tap title 7 times to reveal
+let titleTaps=0;
+document.querySelector('#menu-screen h1').addEventListener('click',()=>{
+  titleTaps++;
+  if(titleTaps>=7){
+    document.getElementById('btn-settings').style.display='block';
+    titleTaps=0;
+  }
 });
 
 document.getElementById('btn-settings').addEventListener('click',()=>{
