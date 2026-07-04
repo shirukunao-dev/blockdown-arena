@@ -416,7 +416,7 @@ class Room{
     try{
       this._tick();
     }catch(e){
-      console.error('Tick error:',e.message);
+      console.error('Tick error:',this.id,e.message);
       clearInterval(this.tickInterval);
       this.tickInterval=null;
       this.broadcast({type:'error',message:'Game error, restarting...'});
@@ -437,7 +437,9 @@ class Room{
         let bot=this.bots.find(b=>b.playerId===p.playerId);
         if(bot&&!bot.dead&&bot.getInput){
           let input=bot.getInput();
-          while(input){
+          let loopCount=0;
+          while(input&&loopCount<50){
+            loopCount++;
             this.processInput(bot,input,bot.playerId);
             input=bot.getInput();
           }
@@ -490,7 +492,6 @@ class Room{
     // Check win condition
     let alive=players.filter(p=>!this.isDead(p));
     if(alive.length<=1&&players.length>1&&!allDead){
-      // Winner!
       if(alive.length===1){
         this.gameOver=true;
         let winner=alive[0];
@@ -506,14 +507,12 @@ class Room{
       }
     }
     
-    // If all dead
     if(allDead&&players.length>1){
       this.gameOver=true;
       clearInterval(this.tickInterval);
       this.broadcast({type:'game_over',killOrder:this.killOrder,winnerId:null,winnerName:'Draw'});
     }
     
-    // Send state update
     if(!this.gameOver){
       let states={};
       for(let p of players){
@@ -641,7 +640,7 @@ function addBotsToRoom(room,count,skill){
 
 // --- WebSocket Server ---
 const server=http.createServer(app);
-const wss=new WebSocketServer({server,path:'/ws'});
+const wss=new WebSocketServer({server});
 
 function getUserByToken(token){
   return Object.values(DB.users).find(u=>u.token===token);

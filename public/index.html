@@ -306,7 +306,7 @@ function connectWS(){
   hideWakeup();
   let connectTimer=setTimeout(showWakeup,3000);
   
-  WS=new WebSocket(proto+'//'+host+'/ws');
+  WS=new WebSocket(proto+'//'+host);
   
   WS.onopen=()=>{
     connected=true;
