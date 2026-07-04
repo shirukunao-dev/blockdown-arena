@@ -341,12 +341,6 @@ function connectWS(){
   };
 }
 
-function send(msg){
-  if(WS&&WS.readyState===1){
-    WS.send(JSON.stringify(msg));
-  }
-}
-
 // --- Message Handler ---
 function handleMessage(msg){
   switch(msg.type){
