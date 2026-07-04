@@ -1,0 +1,7 @@
+node_modules/
+data.json
+*.log
+android/
+.capacitor/
+.DS_Store
+*.jks

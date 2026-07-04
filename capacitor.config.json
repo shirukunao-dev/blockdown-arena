@@ -1,0 +1,14 @@
+{
+  "appId": "com.sungai.Blockdown",
+  "appName": "Blockdown Arena",
+  "bundledWebRuntime": false,
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Billing": {
+      "enabled": true
+    }
+  }
+}
