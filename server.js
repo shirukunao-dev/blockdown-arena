@@ -327,6 +327,7 @@ class Room{
     this.garbageQueue={};
     this.killOrder=[];
     this.startTime=0;
+    this._lastSentGarbage={};
   }
 
   addPlayer(socket,user,token){
@@ -411,7 +412,17 @@ class Room{
   }
 
   tick(){
-    // Tick all engines
+    try{
+      this._tick();
+    }catch(e){
+      console.error('Tick error:',e.message);
+      clearInterval(this.tickInterval);
+      this.tickInterval=null;
+      this.broadcast({type:'error',message:'Game error, restarting...'});
+    }
+  }
+
+  _tick(){
     let players=this.getAllPlayers();
     let allDead=true;
     
@@ -422,7 +433,7 @@ class Room{
       // Bot input
       if(p.isBot){
         let bot=this.bots.find(b=>b.playerId===p.playerId);
-        if(bot&&!bot.dead){
+        if(bot&&!bot.dead&&bot.getInput){
           let input=bot.getInput();
           while(input){
             this.processInput(bot,input,bot.playerId);
@@ -439,27 +450,27 @@ class Room{
       let grav=GRAVITY_FRAMES.normal;
       if(p.isBot){
         let bot=this.bots.find(b=>b.playerId===p.playerId);
-        grav=GRAVITY_FRAMES['bot_'+bot.skill]||20;
+        if(bot)grav=GRAVITY_FRAMES['bot_'+bot.skill]||20;
       }
       engine.tick(grav);
     }
     
     // Process garbage between players
     for(let p of players){
-      let engine=this.engines[p.id||p.playerId];
+      let pid=p.id||p.playerId;
+      let engine=this.engines[pid];
       if(!engine)continue;
-      let sent=engine.garbageSent-((p._lastSent)||0);
-      p._lastSent=engine.garbageSent;
+      let lastSent=this._lastSentGarbage[pid]||0;
+      let sent=engine.garbageSent-lastSent;
+      this._lastSentGarbage[pid]=engine.garbageSent;
       if(sent>0){
-        // Send garbage to opponents
-        let opponents=players.filter(o=>o!==p&&!this.isDead(o));
+        let opponents=players.filter(o=>{let oid=o.id||o.playerId;return oid!==pid&&!this.isDead(o)});
         if(opponents.length>0){
-          // Split garbage among alive opponents
           let perOpp=Math.floor(sent/opponents.length);
           for(let opp of opponents){
             let oppEngine=this.engines[opp.id||opp.playerId];
             if(oppEngine&&!oppEngine.gameOver){
-              oppEngine.addGarbage(perOpp);
+              try{oppEngine.addGarbage(perOpp)}catch(e){}
             }
           }
         }
@@ -628,7 +639,7 @@ function addBotsToRoom(room,count,skill){
 
 // --- WebSocket Server ---
 const server=http.createServer(app);
-const wss=new WebSocketServer({server});
+const wss=new WebSocketServer({server,path:'/ws'});
 
 function getUserByToken(token){
   return Object.values(DB.users).find(u=>u.token===token);
